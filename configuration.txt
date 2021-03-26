@@ -1,7 +1,7 @@
                # of rs         Cycles in EX    Cycles in Mem   # of FUs
 Integer adder   4               1                               1
-FP adder        4               3                               2
-FP multiplier   4               5                               2
+FP adder        4               3                               1
+FP multiplier   4               5                               1
 Load/store unit 4               1               6               1
 
 reorder_buffer entries = 64

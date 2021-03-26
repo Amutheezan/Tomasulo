@@ -42,15 +42,12 @@ def check_valid_ins_in_rs(rs, reorder_buffer, cycle):
                             if selected_rob.tag_1st == rob_x.dest_tag \
                                     or selected_rob.tag_2nd == rob_x.dest_tag:
                                 dependent = True
-                                break
                         if rob_x.issue[0] <= selected_rob.issue[0] and \
                                 len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle \
                                 and rob_x.counter < selected_rob.counter:
                             if selected_rob.tag_1st == rob_x.dest_tag \
-                                    or selected_rob.tag_2nd == rob_x.dest_tag or \
-                                    selected_rob.dest_tag == rob_x.dest_tag:
+                                    or selected_rob.tag_2nd == rob_x.dest_tag:
                                 dependent = True
-                                break
                 if not dependent:
                     index = possible_indices[min_index]
                     break
