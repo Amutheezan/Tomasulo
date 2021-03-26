@@ -142,31 +142,32 @@ def fu_exe(fus, fu_results, reorder_buffer, time_fu, cycle, program_counter):
 
 
 # function: ld_sd_execution
-def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle):
-    if ld_sd_exe.busy == 1:
-        # write down starting cycle
-        if ld_sd_exe.cycle == 0:
-            element = None
-            for element in ld_sd_queue:
-                if element.ld_sd_tag == ld_sd_exe.dest_tag:
-                    break
-            index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag)
-            reorder_buffer[index].exe.append(cycle)
-            # execute
-            ld_sd_exe.cycle += 1
-        # write address back to ld_sd_queue
-        if ld_sd_exe.cycle == time_ld_sd_exe:
-            address = ld_sd_exe.value1 + ld_sd_exe.value2
-            element = None
-            for element in ld_sd_queue:
-                if element.ld_sd_tag == ld_sd_exe.dest_tag:
-                    element.address = address
-                    element.ready = 1
-                    break
-            # write down finish cycle
-            index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag)
-            reorder_buffer[index].exe.append(cycle)
-            ld_sd_exe.busy = 0
+def ld_sd_execution(ld_sd_exes, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle):
+    for ld_sd_exe in ld_sd_exes:
+        if ld_sd_exe.busy == 1:
+            # write down starting cycle
+            if ld_sd_exe.cycle == 0:
+                element = None
+                for element in ld_sd_queue:
+                    if element.ld_sd_tag == ld_sd_exe.dest_tag:
+                        break
+                index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag)
+                reorder_buffer[index].exe.append(cycle)
+                # execute
+                ld_sd_exe.cycle += 1
+            # write address back to ld_sd_queue
+            if ld_sd_exe.cycle == time_ld_sd_exe:
+                address = ld_sd_exe.value1 + ld_sd_exe.value2
+                element = None
+                for element in ld_sd_queue:
+                    if element.ld_sd_tag == ld_sd_exe.dest_tag:
+                        element.address = address
+                        element.ready = 1
+                        break
+                # write down finish cycle
+                index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag)
+                reorder_buffer[index].exe.append(cycle)
+                ld_sd_exe.busy = 0
 
 
 # function: get functional unit
@@ -175,14 +176,23 @@ def get_fu_unit(fu_units):
     return lengths.index(min(lengths))
 
 
+def get_free_ld(ld_sd_exes):
+    index = -1
+    for i, ld_sd_exe in enumerate(ld_sd_exes):
+        if ld_sd_exe.busy == 0:
+            index = i
+            break
+    return index
+
+
 def exe(fu_int_adders, time_fu_int_adder,
         fu_fp_adders, time_fu_fp_adder,
         fu_fp_multis, time_fu_fp_multi, results_buffer,
         rs_int_adder, rs_fp_adder, rs_fp_multi,
-        ld_sd_exe, time_ld_sd_exe, ld_sd_queue,
+        ld_sd_exes, time_ld_sd_exe, ld_sd_queue,
         cycle, reorder_buffer, program_counter):
     '''execution in fu and ld_sd address calculation'''
-    ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
+    ld_sd_execution(ld_sd_exes, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
     # functional units
     fu_exe(fu_int_adders, results_buffer, reorder_buffer, time_fu_int_adder, cycle, program_counter)
     fu_exe(fu_fp_adders, results_buffer, reorder_buffer, time_fu_fp_adder, cycle, program_counter)
@@ -192,7 +202,9 @@ def exe(fu_int_adders, time_fu_int_adder,
     # check valid ins in ld_sd_queue
     index = check_valid_ins_in_ldsd(ld_sd_queue, reorder_buffer, cycle)
     # put ins into ld_sd_exe
-    if (index >= 0) & (ld_sd_exe.busy == 0):
+    ld_index = get_free_ld(ld_sd_exes)
+    if (index >= 0) & (ld_index >= 0):
+        ld_sd_exe = ld_sd_exes[ld_index]
         ld_sd_exe.busy = 1
         ld_sd_exe.cycle = 0
         ld_sd_exe.value1 = ld_sd_queue[index].reg_value
@@ -200,7 +212,7 @@ def exe(fu_int_adders, time_fu_int_adder,
         ld_sd_exe.dest_tag = ld_sd_queue[index].ld_sd_tag
         reorder_buffer_idx = find_reorder_buffer_entry(reorder_buffer, ld_sd_queue[index].dest_tag)
         if reorder_buffer[reorder_buffer_idx].issue[0] < cycle:
-            ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
+            ld_sd_execution(ld_sd_exes, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
     # from rs
     # int_adder
     # fetch valid instruction

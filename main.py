@@ -51,12 +51,18 @@ time_fu_fp_multi = fp_m_config.cycles_in_exe
 ld_sd_queue = deque()
 size_ld_sd_queue = ls_config.no_of_rs
 
-ld_sd_exe = ld_sd_exe()
-ld_sd_exe.busy = 0
+ld_sd_exes = []
+for i in range(ls_config.functional_unit):
+    ld_sd_exe_obj = ld_sd_exe()
+    ld_sd_exe_obj.busy = 0
+    ld_sd_exes.append(ld_sd_exe_obj)
 time_ld_sd_exe = ls_config.cycles_in_exe
 
-ld_sd_mem = ld_sd_mem()
-ld_sd_mem.busy = 0
+ld_sd_mems = []
+for i in range(ls_config.functional_unit):
+    ld_sd_mem_obj = ld_sd_mem()
+    ld_sd_mem_obj.busy = 0
+    ld_sd_mems.append(ld_sd_mem_obj)
 time_ld_sd_mem = ls_config.cycles_in_mem
 
 '''initialize reorder_buffer'''
@@ -97,14 +103,14 @@ while (len(reorder_buffer) > 0) | (cycle == 1):
        results_buffer, issue_width)
 
     '''MEM stage'''
-    mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle)
+    mem(ld_sd_queue, ld_sd_mems, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle)
 
     '''EXE stage'''
     exe(fu_int_adders, time_fu_int_adder,
         fu_fp_adders, time_fu_fp_adder,
         fu_fp_multis, time_fu_fp_multi, results_buffer,
         rs_int_adder, rs_fp_adder, rs_fp_multi,
-        ld_sd_exe, time_ld_sd_exe, ld_sd_queue,
+        ld_sd_exes, time_ld_sd_exe, ld_sd_queue,
         cycle, reorder_buffer, program_counter)
 
     '''ISSUE stage'''
