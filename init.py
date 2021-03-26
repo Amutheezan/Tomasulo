@@ -5,59 +5,47 @@ from collections import namedtuple
 
 # reservation station
 def rs_entry():
-    rs_entry = namedtuple('rs_entry',
-                          'busy, op, tag_1st, value_1st, valid_1st, tag_2nd, value_2nd, valid_2nd, dest_tag')
-    temp = rs_entry
-    return temp
+    return namedtuple('rs_entry',
+                          'busy, op, counter, tag_1st, value_1st, valid_1st, tag_2nd, value_2nd, valid_2nd, dest_tag')
 
 
 # functional unit 
 def fu_entry():
-    fu_entry = namedtuple('fu_entry', 'cycle, op, value1, value2, dest_tag')
-    temp = fu_entry
-    return temp
+    return namedtuple('fu_entry', 'cycle, op, value1, value2, dest_tag, counter')
 
 
 # function result
 def fu_result():
-    fu_result = namedtuple('fu_result', 'value, dest_tag')
-    temp = fu_result
-    return temp
+    return namedtuple('fu_result', 'value, dest_tag')
 
 
 # ld/sd entry
 def ld_sd_entry():
-    ld_sd_entry = namedtuple('ld_sd_entry',
-                             'ld_sd_tag, ready, op, address, data, dest_tag, immediate, reg_tag, reg_value, valid')
-    temp = ld_sd_entry
-    return temp
+    return namedtuple('ld_sd_entry',
+                      'ld_sd_tag, ready, op, address, data, dest_tag, immediate, reg_tag, reg_value, valid, counter')
 
 
 # ld/sd exe
 def ld_sd_exe():
-    ld_sd_exe = namedtuple('ld_sd_exe', 'busy, cycle, value1, value2, dest_tag')
-    temp = ld_sd_exe
-    return temp
+    return namedtuple('ld_sd_exe', 'busy, cycle, value1, value2, dest_tag')
 
 
 # ld/sd mem
 def ld_sd_mem():
-    ld_sd_mem = namedtuple('ld_sd_mem', 'busy, cycle, op, data, address, dest_tag')
-    temp = ld_sd_mem
-    return temp
+    return namedtuple('ld_sd_mem', 'busy, cycle, op, data, address, dest_tag')
 
 
 # cdb
 def cdb():
-    cdb = namedtuple('cdb', 'valid, value, dest_tag')
-    temp = cdb
-    return temp
+    return namedtuple('cdb', 'valid, value, dest_tag')
 
 
-# ROB_entry
-def ROB_entry():
-    ROB_entry = namedtuple('ROB_entry', 'ROB_tag, PC, value, op, tag_1st, tag_2nd, reg_tag, immediate, dest_tag, issue, exe, mem, cdb, commit')
-    temp = ROB_entry
+# reorder_buffer_entry
+def reorder_buffer_entry():
+    rob_entry = namedtuple('reorder_buffer_entry',
+                           'reorder_buffer_tag, counter, value, op, tag_1st, tag_2nd, reg_tag,'
+                           ' immediate, dest_tag, issue, exe, mem, cdb, commit')
+    temp = rob_entry
     temp.issue = []
     temp.exe = []
     temp.mem = []
@@ -66,11 +54,9 @@ def ROB_entry():
     return temp
 
 
-# PC
-def PC():
-    PC = namedtuple('PC', 'PC, valid')
-    temp = PC
-    return temp
+# program_counter
+def program_counter():
+    return namedtuple('program_counter', 'counter, valid')
 
 
 # function: read instructions

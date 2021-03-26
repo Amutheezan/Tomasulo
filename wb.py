@@ -5,24 +5,24 @@
 '''
 
 
-# function: find ROB entry by tag
-def find_ROB_entry(ROB, tag):
+# function: find reorder_buffer entry by tag
+def find_reorder_buffer_entry(reorder_buffer, tag):
     index = -1
-    for index in range(len(ROB)):
-        if ROB[index].ROB_tag == tag:
+    for index in range(len(reorder_buffer)):
+        if reorder_buffer[index].reorder_buffer_tag == tag:
             break
     return index
 
 
 # function: broadcast
-# rat_int, rat_fp, reservation stations, ld_sd_queue, ROB
+# rat_int, rat_fp, reservation stations, ld_sd_queue, reorder_buffer
 def broadcast(cdb, rat_int, rat_fp,
               rs_int_adder, rs_fp_adder, rs_fp_multi,
-              ld_sd_queue, ROB, cycle):
+              ld_sd_queue, reorder_buffer, cycle):
     # dest_tag
     dest_tag = cdb.dest_tag
-    index = find_ROB_entry(ROB, dest_tag)
-    reg_tag = ROB[index].dest_tag
+    index = find_reorder_buffer_entry(reorder_buffer, dest_tag)
+    reg_tag = reorder_buffer[index].dest_tag
     # rat_int
     if reg_tag[0] == 'R':
         rat_int[int(reg_tag[1:])] = cdb.value
@@ -47,9 +47,9 @@ def broadcast(cdb, rat_int, rat_fp,
         if (element.reg_tag == dest_tag) & (element.valid == 0):
             element.reg_value = cdb.value
             element.valid = 1
-    # ROB
-    for element in ROB:
-        if element.ROB_tag == dest_tag:
+    # reorder_buffer
+    for element in reorder_buffer:
+        if element.reorder_buffer_tag == dest_tag:
             element.value = cdb.value
             element.cdb.append(cycle)
 
@@ -57,7 +57,7 @@ def broadcast(cdb, rat_int, rat_fp,
 # function: wb
 def wb(cdb, rat_int, rat_fp,
        rs_int_adder, rs_fp_adder, rs_fp_multi,
-       ld_sd_queue, ROB, cycle,
+       ld_sd_queue, reorder_buffer, cycle,
        results_buffer, issue_width):
     # broadcast
     bd_count = 0
@@ -68,5 +68,5 @@ def wb(cdb, rat_int, rat_fp,
         results_buffer.popleft()
         broadcast(cdb, rat_int, rat_fp,
                   rs_int_adder, rs_fp_adder, rs_fp_multi,
-                  ld_sd_queue, ROB, cycle)
+                  ld_sd_queue, reorder_buffer, cycle)
         bd_count += 1

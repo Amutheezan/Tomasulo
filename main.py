@@ -3,16 +3,16 @@ from copy import deepcopy
 
 from commit import commit
 from exe import exe
-from init import read_instruction, build_rs, ld_sd_exe, ld_sd_mem, cdb, PC
+from init import read_instruction, build_rs, ld_sd_exe, ld_sd_mem, cdb, program_counter
 from issue import issue
 from mem import mem
-from wb import wb
 from util import read_config
+from wb import wb
 
 '''initialize'''
 # read instructions into a list 
 instructions = read_instruction('code.in')
-int_a_config, fp_a_config, fp_m_config, ls_config, number_of_rob, reg_int, reg_fp, memory =\
+int_a_config, fp_a_config, fp_m_config, ls_config, number_of_rob, reg_int, reg_fp, memory = \
     read_config("configuration.txt")
 '''initialize regs, RAT, memory'''
 rat_int = deepcopy(reg_int)
@@ -59,8 +59,8 @@ ld_sd_mem = ld_sd_mem()
 ld_sd_mem.busy = 0
 time_ld_sd_mem = ls_config.cycles_in_mem
 
-'''initialize ROB'''
-ROB = deque()
+'''initialize reorder_buffer'''
+reorder_buffer = deque()
 size_ROB = number_of_rob
 '''initialize CDB'''
 results_buffer = deque()
@@ -68,9 +68,9 @@ cdb = cdb()
 cdb.valid = 0
 """issue first instruction"""
 # instruction pointer 
-PC = PC()
-PC.PC = 0
-PC.valid = 1
+program_counter = program_counter()
+program_counter.counter = 0
+program_counter.valid = 1
 cycle = 1
 
 # print title 
@@ -85,15 +85,15 @@ print(item)
 issue_width = 4
 
 # main
-while (len(ROB) > 0) | (cycle == 1):
+while (len(reorder_buffer) > 0) | (cycle == 1):
 
     '''COMMIT stage'''
-    commit(ROB, reg_int, reg_fp, cycle, instructions, issue_width)
+    commit(reorder_buffer, reg_int, reg_fp, cycle, instructions, issue_width)
 
     '''CDB stage'''
     wb(cdb, rat_int, rat_fp,
        rs_int_adder, rs_fp_adder, rs_fp_multi,
-       ld_sd_queue, ROB, cycle,
+       ld_sd_queue, reorder_buffer, cycle,
        results_buffer, issue_width)
 
     '''EXE stage'''
@@ -102,14 +102,14 @@ while (len(ROB) > 0) | (cycle == 1):
         fu_fp_multis, time_fu_fp_multi, results_buffer,
         rs_int_adder, rs_fp_adder, rs_fp_multi,
         ld_sd_exe, time_ld_sd_exe, ld_sd_queue,
-        cycle, ROB, PC)
+        cycle, reorder_buffer, program_counter)
 
     '''MEM stage'''
-    mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, ROB, cycle)
+    mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle)
 
     '''ISSUE stage'''
-    if (PC.PC < len(instructions)) & (PC.valid == 1):
-        issue(cycle, PC, instructions, ROB, size_ROB,
+    if (program_counter.counter < len(instructions)) & (program_counter.valid == 1):
+        issue(cycle, program_counter, instructions, reorder_buffer, size_ROB,
               rs_int_adder,
               rs_fp_adder,
               rs_fp_multi,

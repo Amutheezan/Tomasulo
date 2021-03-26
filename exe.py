@@ -9,64 +9,68 @@
 from init import fu_entry, fu_result
 
 cycle_call_history = {}
+cycle_insert_history = {}
 
 
 # function: check rs and return valid instruction index
-def check_valid_ins_in_rs(rs, ROB, cycle):
+def check_valid_ins_in_rs(rs, reorder_buffer, cycle):
     index = -1
     if len(rs) != 0:
         possible_indices = []
-        issue_cycles = []
+        issue_counters = []
         for i in range(len(rs)):
             if (rs[i].valid_1st == 1) & \
                     (rs[i].valid_2nd == 1) \
                     & (rs[i].busy == 1):
                 possible_indices.append(i)
-                index_r = find_ROB_entry(ROB, rs[i].dest_tag)
-                issue_cycles.append(ROB[index_r].issue[0])
+                index_r = find_reorder_buffer_entry(reorder_buffer, rs[i].dest_tag, rs[i].counter)
+                issue_counters.append(reorder_buffer[index_r].counter)
 
         if len(possible_indices) > 0:
-            while len(issue_cycles) > 0:
+            while len(issue_counters) > 0:
                 dependent = False
-                min_index = issue_cycles.index(min(issue_cycles))
+                min_index = issue_counters.index(min(issue_counters))
                 index_t = possible_indices[min_index]
-                index_p = find_ROB_entry(ROB, rs[index_t].dest_tag)
-                selected_rob = ROB[index_p]
-                for i, rob_x in enumerate(ROB):
+                index_p = find_reorder_buffer_entry(reorder_buffer, rs[index_t].dest_tag, rs[index_t].counter)
+                selected_rob = reorder_buffer[index_p]
+                for i, rob_x in enumerate(reorder_buffer):
                     if selected_rob.op == "Addi":
                         dependent = False
                     else:
                         if rob_x.issue[0] < selected_rob.issue[0] and \
-                                len(rob_x.cdb) == 0:
+                                len(rob_x.cdb) == 0 and rob_x.counter < selected_rob.counter:
                             if selected_rob.tag_1st == rob_x.dest_tag \
                                     or selected_rob.tag_2nd == rob_x.dest_tag:
                                 dependent = True
+                                break
                         if rob_x.issue[0] <= selected_rob.issue[0] and \
-                                len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle\
-                                and rob_x.PC < selected_rob.PC:
+                                len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle \
+                                and rob_x.counter < selected_rob.counter:
                             if selected_rob.tag_1st == rob_x.dest_tag \
-                                    or selected_rob.tag_2nd == rob_x.dest_tag:
+                                    or selected_rob.tag_2nd == rob_x.dest_tag or \
+                                    selected_rob.dest_tag == rob_x.dest_tag:
                                 dependent = True
+                                break
                 if not dependent:
                     index = possible_indices[min_index]
                     break
                 else:
-                    if len(issue_cycles) >= 1:
-                        issue_cycles.pop(min_index)
+                    if len(issue_counters) >= 1:
+                        issue_counters.pop(min_index)
                         possible_indices.pop(min_index)
     return index
 
 
 # function: check ld_sd_queue and return valid instruction index
-def check_valid_ins_in_ldsd(ldsd, ROB, cycle):
+def check_valid_ins_in_ldsd(ldsd, reorder_buffer, cycle):
     index = -1
     if len(ldsd) != 0:
         for i in range(len(ldsd)):
             if (ldsd[i].valid == 1) & (ldsd[i].ready == 0):
                 dependent = False
-                index_p = find_ROB_entry(ROB, ldsd[i].dest_tag)
-                selected_rob = ROB[index_p]
-                for x, rob_x in enumerate(ROB):
+                index_p = find_reorder_buffer_entry(reorder_buffer, ldsd[i].dest_tag, ldsd[i].counter)
+                selected_rob = reorder_buffer[index_p]
+                for x, rob_x in enumerate(reorder_buffer):
                     if rob_x.issue[0] <= selected_rob.issue[0] \
                             and len(rob_x.cdb) == 1 and \
                             rob_x.cdb[0] == cycle:
@@ -85,19 +89,21 @@ def add_entry_into_fu(fu, ins_in_rs):
     fu[-1].value1 = ins_in_rs.value_1st
     fu[-1].value2 = ins_in_rs.value_2nd
     fu[-1].dest_tag = ins_in_rs.dest_tag
+    fu[-1].counter = ins_in_rs.counter
 
 
-# function: find ROB entry by tag
-def find_ROB_entry(ROB, tag):
+# function: find reorder_buffer entry by tag
+def find_reorder_buffer_entry(reorder_buffer, tag, counter):
     index = -1
-    for index in range(len(ROB)):
-        if ROB[index].ROB_tag == tag:
+    for index in range(len(reorder_buffer)):
+        if reorder_buffer[index].reorder_buffer_tag == tag and \
+                reorder_buffer[index].counter == counter:
             break
     return index
 
 
 # function: functional units execution
-def fu_exe(fus, fu_results, ROB, time_fu, cycle, PC):
+def fu_exe(fus, fu_results, reorder_buffer, time_fu, cycle, program_counter):
     for fu in fus:
         if len(fu) != 0:
             for element in fu:
@@ -106,12 +112,14 @@ def fu_exe(fus, fu_results, ROB, time_fu, cycle, PC):
                     cycle_call_history[(element, cycle)] = 1
             # write starting cycle
             if fu[-1].cycle == 1:
-                index = find_ROB_entry(ROB, fu[-1].dest_tag)
-                ROB[index].exe.append(cycle)
+                if (fu[-1], cycle) not in cycle_insert_history.keys():
+                    index = find_reorder_buffer_entry(reorder_buffer, fu[-1].dest_tag, fu[-1].counter)
+                    reorder_buffer[index].exe.append(cycle)
+                    cycle_insert_history[(fu[-1], cycle)] = 1
             # finish cycle
             if fu[0].cycle == time_fu:
-                index = find_ROB_entry(ROB, fu[0].dest_tag)
-                ROB[index].exe.append(cycle)
+                index = find_reorder_buffer_entry(reorder_buffer, fu[0].dest_tag, fu[0].counter)
+                reorder_buffer[index].exe.append(cycle)
                 # calculation result
                 fu_results.append(fu_result())
                 fu_results[-1].dest_tag = fu[0].dest_tag
@@ -124,13 +132,13 @@ def fu_exe(fus, fu_results, ROB, time_fu, cycle, PC):
                 elif fu[0].op == 'Bne':
                     fu_results.pop()
                     if fu[0].value1 == fu[0].value2:
-                        PC.PC += 1
-                        PC.valid = 1
+                        program_counter.PC += 1
+                        program_counter.valid = 1
                     else:
-                        index = find_ROB_entry(ROB, fu[0].dest_tag)
-                        offset = ROB[index].dest_tag
-                        PC.PC = int(PC.PC + 1 + offset / 4)
-                        PC.valid = 1
+                        index = find_reorder_buffer_entry(reorder_buffer, fu[0].dest_tag, fu[0].counter)
+                        offset = reorder_buffer[index].dest_tag
+                        program_counter.PC = int(program_counter.PC + 1 + offset / 4)
+                        program_counter.valid = 1
                 else:
                     pass
                 # remove from fu
@@ -138,7 +146,7 @@ def fu_exe(fus, fu_results, ROB, time_fu, cycle, PC):
 
 
 # function: ld_sd_execution
-def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, ROB, cycle):
+def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle):
     if ld_sd_exe.busy == 1:
         # write down starting cycle
         if ld_sd_exe.cycle == 0:
@@ -146,8 +154,8 @@ def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, ROB, cycle):
             for element in ld_sd_queue:
                 if element.ld_sd_tag == ld_sd_exe.dest_tag:
                     break
-            index = find_ROB_entry(ROB, element.dest_tag)
-            ROB[index].exe.append(cycle)
+            index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag, element.counter)
+            reorder_buffer[index].exe.append(cycle)
             # execute
             ld_sd_exe.cycle += 1
         # write address back to ld_sd_queue
@@ -160,28 +168,33 @@ def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, ROB, cycle):
                     element.ready = 1
                     break
             # write down finish cycle
-            index = find_ROB_entry(ROB, element.dest_tag)
-            ROB[index].exe.append(cycle)
+            index = find_reorder_buffer_entry(reorder_buffer, element.dest_tag, element.counter)
+            reorder_buffer[index].exe.append(cycle)
             ld_sd_exe.busy = 0
 
 
 # function: execution
+def get_fu_unit(fu_units):
+    lengths = [len(fu_unit) for fu_unit in fu_units]
+    return lengths.index(min(lengths))
+
+
 def exe(fu_int_adders, time_fu_int_adder,
         fu_fp_adders, time_fu_fp_adder,
         fu_fp_multis, time_fu_fp_multi, results_buffer,
         rs_int_adder, rs_fp_adder, rs_fp_multi,
         ld_sd_exe, time_ld_sd_exe, ld_sd_queue,
-        cycle, ROB, PC):
+        cycle, reorder_buffer, program_counter):
     '''execution in fu and ld_sd address calculation'''
-    ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, ROB, cycle)
+    ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
     # functional units
-    fu_exe(fu_int_adders, results_buffer, ROB, time_fu_int_adder, cycle, PC)
-    fu_exe(fu_fp_adders, results_buffer, ROB, time_fu_fp_adder, cycle, PC)
-    fu_exe(fu_fp_multis, results_buffer, ROB, time_fu_fp_multi, cycle, PC)
+    fu_exe(fu_int_adders, results_buffer, reorder_buffer, time_fu_int_adder, cycle, program_counter)
+    fu_exe(fu_fp_adders, results_buffer, reorder_buffer, time_fu_fp_adder, cycle, program_counter)
+    fu_exe(fu_fp_multis, results_buffer, reorder_buffer, time_fu_fp_multi, cycle, program_counter)
     '''fetch instructions from rs and ld_sd_queue'''
     # from ld_sd_queue
     # check valid ins in ld_sd_queue
-    index = check_valid_ins_in_ldsd(ld_sd_queue, ROB, cycle)
+    index = check_valid_ins_in_ldsd(ld_sd_queue, reorder_buffer, cycle)
     # put ins into ld_sd_exe
     if (index >= 0) & (ld_sd_exe.busy == 0):
         ld_sd_exe.busy = 1
@@ -189,44 +202,54 @@ def exe(fu_int_adders, time_fu_int_adder,
         ld_sd_exe.value1 = ld_sd_queue[index].reg_value
         ld_sd_exe.value2 = ld_sd_queue[index].immediate
         ld_sd_exe.dest_tag = ld_sd_queue[index].ld_sd_tag
-        if ROB[find_ROB_entry(ROB, ld_sd_queue[index].dest_tag)].issue[0] < cycle:
-            ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, ROB, cycle)
+        reorder_buffer_idx = find_reorder_buffer_entry(reorder_buffer, ld_sd_queue[index].dest_tag,
+                                                       ld_sd_queue[index].counter)
+        if reorder_buffer[reorder_buffer_idx].issue[0] < cycle:
+            ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycle)
     # from rs
     # int_adder
     # fetch valid instruction
-    index = check_valid_ins_in_rs(rs_int_adder, ROB, cycle)
-    if index >= 0:
-        fu = None
-        for fu in fu_int_adders:
-            fu.append(fu_entry())
-            break
-        add_entry_into_fu(fu, rs_int_adder[index])
-        # check if it's a waiting instruction
-        if ROB[find_ROB_entry(ROB, rs_int_adder[index].dest_tag)].issue[0] < cycle:
-            fu_exe(fu_int_adders, results_buffer, ROB, time_fu_int_adder, cycle, PC)
-        # remove ins from rs
-        rs_int_adder[index].busy = 0
-    # fp_adder
-    index = check_valid_ins_in_rs(rs_fp_adder, ROB, cycle)
-    if index >= 0:
-        fu = None
-        for fu in fu_fp_adders:
-            fu.append(fu_entry())
-            break
-        add_entry_into_fu(fu, rs_fp_adder[index])
-        if ROB[find_ROB_entry(ROB, rs_fp_adder[index].dest_tag)].issue[0] < cycle:
-            fu_exe(fu_fp_adders, results_buffer, ROB, time_fu_fp_adder, cycle, PC)
-        # remove ins from rs
-        rs_fp_adder[index].busy = 0
-    # fp_multi
-    index = check_valid_ins_in_rs(rs_fp_multi, ROB, cycle)
-    if index >= 0:
-        fu = None
-        for fu in fu_fp_multis:
-            fu.append(fu_entry())
-            break
-        add_entry_into_fu(fu, rs_fp_multi[index])
-        if ROB[find_ROB_entry(ROB, rs_fp_multi[index].dest_tag)].issue[0] < cycle:
-            fu_exe(fu_fp_multis, results_buffer, ROB, time_fu_fp_multi, cycle, PC)
+    for _ in range(len(fu_int_adders)):
+        index = check_valid_ins_in_rs(rs_int_adder, reorder_buffer, cycle)
+        if index >= 0:
+            fu_index = get_fu_unit(fu_int_adders)
+            fu_int_adder = fu_int_adders[fu_index]
+            fu_int_adder.append(fu_entry())
+            add_entry_into_fu(fu_int_adder, rs_int_adder[index])
+            # check if it's a waiting instruction
+            reorder_buffer_idx = find_reorder_buffer_entry(reorder_buffer, rs_int_adder[index].dest_tag,
+                                                           rs_int_adder[index].counter)
+            if reorder_buffer[reorder_buffer_idx].issue[0] < cycle:
+                fu_exe(fu_int_adders, results_buffer, reorder_buffer, time_fu_int_adder, cycle, program_counter)
             # remove ins from rs
-        rs_fp_multi[index].busy = 0
+            rs_int_adder[index].busy = 0
+
+    # fp_adder
+    for _ in range(len(fu_fp_adders)):
+        index = check_valid_ins_in_rs(rs_fp_adder, reorder_buffer, cycle)
+        if index >= 0:
+            fu_index = get_fu_unit(fu_fp_adders)
+            fu_fp_adder = fu_fp_adders[fu_index]
+            fu_fp_adder.append(fu_entry())
+            add_entry_into_fu(fu_fp_adder, rs_fp_adder[index])
+            reorder_buffer_idx = find_reorder_buffer_entry(reorder_buffer, rs_fp_adder[index].dest_tag,
+                                                           rs_fp_adder[index].counter)
+            if reorder_buffer[reorder_buffer_idx].issue[0] < cycle:
+                fu_exe(fu_fp_adders, results_buffer, reorder_buffer, time_fu_fp_adder, cycle, program_counter)
+            # remove ins from rs
+            rs_fp_adder[index].busy = 0
+
+    # fp_multi
+    for _ in range(len(fu_fp_multis)):
+        index = check_valid_ins_in_rs(rs_fp_multi, reorder_buffer, cycle)
+        if index >= 0:
+            fu_index = get_fu_unit(fu_fp_multis)
+            fu_fp_multi = fu_fp_multis[fu_index]
+            fu_fp_multi.append(fu_entry())
+            add_entry_into_fu(fu_fp_multi, rs_fp_multi[index])
+            reorder_buffer_idx = find_reorder_buffer_entry(reorder_buffer, rs_fp_multi[index].dest_tag,
+                                                           rs_fp_multi[index].counter)
+            if reorder_buffer[reorder_buffer_idx].issue[0] < cycle:
+                fu_exe(fu_fp_multis, results_buffer, reorder_buffer, time_fu_fp_multi, cycle, program_counter)
+                # remove ins from rs
+            rs_fp_multi[index].busy = 0

@@ -4,9 +4,9 @@
 '''
 
 
-# function: print ROB entry
-def print_ROB(entry, instructions):
-    item = instructions[entry.PC].ljust(20)
+# function: print reorder_buffer entry
+def print_reorder_buffer(entry, instructions):
+    item = instructions[entry.counter].ljust(20)
     item += str(entry.issue).ljust(10)
     item += str(entry.exe).ljust(15)
     item += str(entry.mem).ljust(15)
@@ -26,27 +26,27 @@ def modify_arch_reg(entry, reg_int, reg_fp):
 
 
 # function: commit
-def commit(ROB, reg_int, reg_fp, cycle, instructions, issue_width):
+def commit(reorder_buffer, reg_int, reg_fp, cycle, instructions, issue_width):
     for i in range(issue_width):
-        if len(ROB) > 0:
-            if instructions[ROB[0].PC].split(' ')[0] == 'Bne':
-                if len(ROB[0].exe) != 0:
-                    entry = ROB.popleft()
-                    print_ROB(entry, instructions)
-            if (len(ROB) > 0) & (instructions[ROB[0].PC].split(' ')[0] != 'Bne'):
-                if len(ROB[0].cdb) != 0:  # broadcasted instructions
-                    ROB[0].commit.append(cycle)
-                    entry = ROB.popleft()
+        if len(reorder_buffer) > 0:
+            if instructions[reorder_buffer[0].counter].split(' ')[0] == 'Bne':
+                if len(reorder_buffer[0].exe) != 0:
+                    entry = reorder_buffer.popleft()
+                    print_reorder_buffer(entry, instructions)
+            if (len(reorder_buffer) > 0) & (instructions[reorder_buffer[0].counter].split(' ')[0] != 'Bne'):
+                if len(reorder_buffer[0].cdb) != 0:  # broadcasted instructions
+                    reorder_buffer[0].commit.append(cycle)
+                    entry = reorder_buffer.popleft()
                     modify_arch_reg(entry, reg_int, reg_fp)
-                    print_ROB(entry, instructions)
-                elif len(ROB[0].commit) != 0:  # Sd
-                    entry = ROB.popleft()
-                    print_ROB(entry, instructions)
-                    if len(ROB) > 0:
-                        if len(ROB[0].cdb) != 0:  # broadcasted instructions
-                            ROB[0].commit.append(cycle)
-                            entry = ROB.popleft()
+                    print_reorder_buffer(entry, instructions)
+                elif len(reorder_buffer[0].commit) != 0:  # Sd
+                    entry = reorder_buffer.popleft()
+                    print_reorder_buffer(entry, instructions)
+                    if len(reorder_buffer) > 0:
+                        if len(reorder_buffer[0].cdb) != 0:  # broadcasted instructions
+                            reorder_buffer[0].commit.append(cycle)
+                            entry = reorder_buffer.popleft()
                             modify_arch_reg(entry, reg_int, reg_fp)
-                            print_ROB(entry, instructions)
+                            print_reorder_buffer(entry, instructions)
                 else:
                     pass

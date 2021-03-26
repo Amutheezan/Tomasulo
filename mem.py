@@ -42,10 +42,10 @@ def check_all_previous_Sd_no_match(ld_sd_queue, index):
     return flag
 
 
-# function: find ROB entry by tag
-def find_ROB_entry(ROB, tag):
-    for index in range(len(ROB)):
-        if ROB[index].ROB_tag == tag:
+# function: find reorder_buffer entry by tag
+def find_ROB_entry(reorder_buffer, tag):
+    for index in range(len(reorder_buffer)):
+        if reorder_buffer[index].reorder_buffer_tag == tag:
             break
     return index
 
@@ -62,19 +62,19 @@ def put_entry_into_ld_sd_mem(ld_sd_mem, entry):
 
 
 # function: check if Sd to be committed in next cycle
-def check_if_sd_committable(ld_sd_queue, ROB):
+def check_if_sd_committable(ld_sd_queue, reorder_buffer):
     flag = False
-    if ld_sd_queue[0].ldsd_tag == ROB[0].dest_tag:
+    if ld_sd_queue[0].ldsd_tag == reorder_buffer[0].dest_tag:
         flag = True
-    if ld_sd_queue[0].ldsd_tag == ROB[1].dest_tag:
+    if ld_sd_queue[0].ldsd_tag == reorder_buffer[1].dest_tag:
         # previous ins has been broadcasted
-        if len(ROB[0].cdb) != 0:
+        if len(reorder_buffer[0].cdb) != 0:
             flag = True
     return flag
 
 
 # function: mem
-def mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, ROB, cycle):
+def mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle):
     '''look forward check for all Ld instructions'''
     index = -1
     remove_list = []
@@ -89,9 +89,9 @@ def mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, ROB, cyc
                 results_buffer[-1].dest_tag = element.dest_tag
                 # remove the Ld instruction
                 remove_list.append(element)
-                # write mem cylce in ROB
-                index = find_ROB_entry(ROB, element.dest_tag)
-                ROB[index].mem.append(cycle)
+                # write mem cylce in reorder_buffer
+                index = find_ROB_entry(reorder_buffer, element.dest_tag)
+                reorder_buffer[index].mem.append(cycle)
     # remove lookforwared Ld
     for element in remove_list:
         ld_sd_queue.remove(element)
@@ -99,11 +99,11 @@ def mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, ROB, cyc
     if ld_sd_mem.busy == 1:
         # write mem starting cycle 
         if ld_sd_mem.cycle == 0:
-            index = find_ROB_entry(ROB, ld_sd_mem.dest_tag)
-            ROB[index].mem.extend([cycle, cycle + time_ld_sd_mem - 1])
+            index = find_ROB_entry(reorder_buffer, ld_sd_mem.dest_tag)
+            reorder_buffer[index].mem.extend([cycle, cycle + time_ld_sd_mem - 1])
             # for Sd, write commit cycle
             if ld_sd_mem.op == 'Sd':
-                ROB[index].commit.append(cycle)
+                reorder_buffer[index].commit.append(cycle)
 
         # cycle ++
         ld_sd_mem.cycle += 1
