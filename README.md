@@ -3,12 +3,20 @@
 ## EXECUTION
 
 Steps of run the code:
+
+For memory unit without pipeline
+
+```bash
+cd memory_np
 python main.py
+```
 
-## CONFIGURING ISSUE WIDTH
+For memory unit with pipeline
 
-by default the issue_width is set to the value ''4''.
-we can change the issue_width by editing the the main.py at line 78 (which can change parameter value for the variable ''issue_width'').
+```bash
+cd memory_p
+python main.py
+```
 
 ## TEST CASES
 
