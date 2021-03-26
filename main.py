@@ -96,6 +96,9 @@ while (len(reorder_buffer) > 0) | (cycle == 1):
        ld_sd_queue, reorder_buffer, cycle,
        results_buffer, issue_width)
 
+    '''MEM stage'''
+    mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle)
+
     '''EXE stage'''
     exe(fu_int_adders, time_fu_int_adder,
         fu_fp_adders, time_fu_fp_adder,
@@ -103,9 +106,6 @@ while (len(reorder_buffer) > 0) | (cycle == 1):
         rs_int_adder, rs_fp_adder, rs_fp_multi,
         ld_sd_exe, time_ld_sd_exe, ld_sd_queue,
         cycle, reorder_buffer, program_counter)
-
-    '''MEM stage'''
-    mem(ld_sd_queue, ld_sd_mem, time_ld_sd_mem, results_buffer, memory, reorder_buffer, cycle)
 
     '''ISSUE stage'''
     if (program_counter.counter < len(instructions)) & (program_counter.valid == 1):
