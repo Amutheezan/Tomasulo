@@ -170,7 +170,7 @@ def ld_sd_execution(ld_sd_exe, time_ld_sd_exe, ld_sd_queue, reorder_buffer, cycl
             ld_sd_exe.busy = 0
 
 
-# function: execution
+# function: get functional unit
 def get_fu_unit(fu_units):
     lengths = [len(fu_unit) for fu_unit in fu_units]
     return lengths.index(min(lengths))
