@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from commit import commit
 from exe import exe
-from init import read_instruction, build_rs, ld_sd_exe, ld_sd_mem, cdb, program_counter
+from init import read_instruction, build_rs, cdb, program_counter
 from issue import issue
 from mem import mem
 from util import read_config
@@ -31,20 +31,17 @@ rs_fp_multi = build_rs(size_rs_fp_multi)
 '''initilize function unit'''
 fu_int_adders = []
 for i in range(int_a_config.functional_unit):
-    fu_int_adder = deque()
-    fu_int_adders.append(fu_int_adder)
+    fu_int_adders.append(deque())
 time_fu_int_adder = int_a_config.cycles_in_exe
 
 fu_fp_adders = []
 for i in range(fp_a_config.functional_unit):
-    fu_fp_adder = deque()
-    fu_fp_adders.append(fu_fp_adder)
+    fu_fp_adders.append(deque())
 time_fu_fp_adder = fp_a_config.cycles_in_exe
 
 fu_fp_multis = []
 for i in range(fp_m_config.functional_unit):
-    fu_fp_multi = deque()
-    fu_fp_multis.append(fu_fp_multi)
+    fu_fp_multis.append(deque())
 time_fu_fp_multi = fp_m_config.cycles_in_exe
 
 '''initialize load/store queue'''
@@ -53,16 +50,12 @@ size_ld_sd_queue = ls_config.no_of_rs
 
 ld_sd_exes = []
 for i in range(ls_config.functional_unit):
-    ld_sd_exe_obj = ld_sd_exe()
-    ld_sd_exe_obj.busy = 0
-    ld_sd_exes.append(ld_sd_exe_obj)
+    ld_sd_exes.append(deque())
 time_ld_sd_exe = ls_config.cycles_in_exe
 
 ld_sd_mems = []
 for i in range(ls_config.functional_unit):
-    ld_sd_mem_obj = ld_sd_mem()
-    ld_sd_mem_obj.busy = 0
-    ld_sd_mems.append(ld_sd_mem_obj)
+    ld_sd_mems.append(deque())
 time_ld_sd_mem = ls_config.cycles_in_mem
 
 '''initialize reorder_buffer'''

@@ -9,7 +9,7 @@
     -- if first element is SD, ready and has valid data, only SD to be committed can be fetched into ld_sd_mem 
     -- else put the first no-matched Ld into ld_sd_mem    
 '''
-from init import fu_result
+from init import fu_result, ld_sd_mem
 
 
 # function: forward check from sd
@@ -44,6 +44,7 @@ def check_all_previous_Sd_no_match(ld_sd_queue, index):
 
 # function: find reorder_buffer entry by tag
 def find_ROB_entry(reorder_buffer, tag):
+    index = -1
     for index in range(len(reorder_buffer)):
         if reorder_buffer[index].reorder_buffer_tag == tag:
             break
@@ -96,9 +97,11 @@ def mem(ld_sd_queue, ld_sd_mems, time_ld_sd_mem, results_buffer, memory, reorder
     for element in remove_list:
         ld_sd_queue.remove(element)
 
-    for ld_sd_mem in ld_sd_mems:
+    for ld_sd_mem_queue in ld_sd_mems:
+        ld_sd_mem_obj = ld_sd_mem()
+        ld_sd_mem_obj.busy = 0
         '''fetch new instruction into ld_sd_mem'''
-        if (ld_sd_mem.busy == 0) & (len(ld_sd_queue) > 0):
+        if (len(ld_sd_queue) > 0):
             # flag_1st_ldsd
             flag_1st_ldsd_sent = False
             # fetch the ld_sd_queue header if it's Sd, ready and to be committed
@@ -111,9 +114,9 @@ def mem(ld_sd_queue, ld_sd_mems, time_ld_sd_mem, results_buffer, memory, reorder
                         if (type(ld_sd_queue[0].data) == int) | (type(ld_sd_queue[0].data) == float):
                             # put the Sd entry into ld_sd_mem
                             entry = ld_sd_queue.popleft()
-                            put_entry_into_ld_sd_mem(ld_sd_mem, entry)
+                            put_entry_into_ld_sd_mem(ld_sd_mem_obj, entry)
                             flag_1st_ldsd_sent = True
-                            ld_sd_mem.busy = 1
+                            ld_sd_mem_obj.busy = 1
 
             # if the 1st Sd is not sent to ld_sd_mem, or the 1st is not Sd
             if (flag_1st_ldsd_sent == False):
@@ -124,33 +127,36 @@ def mem(ld_sd_queue, ld_sd_mems, time_ld_sd_mem, results_buffer, memory, reorder
                         if (type(ld_sd_queue[0].data) != int) & (type(ld_sd_queue[0].data) != float):
                             # all previous Sd instructions are ready but no address match
                             if check_all_previous_Sd_no_match(ld_sd_queue, index):
-                                put_entry_into_ld_sd_mem(ld_sd_mem, ld_sd_queue[index])
+                                put_entry_into_ld_sd_mem(ld_sd_mem_obj, ld_sd_queue[index])
                                 ld_sd_queue.remove(ld_sd_queue[index])
-                                ld_sd_mem.busy = 1
+                                ld_sd_mem_obj.busy = 1
                                 break
+        ld_sd_mem_queue.append(ld_sd_mem_obj)
 
-        '''ld_sd_mem execution'''
-        if ld_sd_mem.busy == 1:
-            # write mem starting cycle
-            if ld_sd_mem.cycle == 0:
-                index = find_ROB_entry(reorder_buffer, ld_sd_mem.dest_tag)
-                reorder_buffer[index].mem.extend([cycle, cycle + time_ld_sd_mem - 1])
-                # for Sd, write commit cycle
-                if ld_sd_mem.op == 'Sd':
-                    reorder_buffer[index].commit.append(cycle)
+    for ld_sd_mem_queue in ld_sd_mems:
+        for ld_sd_mem_obj in ld_sd_mem_queue:
+            '''ld_sd_mem execution'''
+            if ld_sd_mem_obj.busy == 1:
+                # write mem starting cycle
+                if ld_sd_mem_obj.cycle == 0:
+                    index = find_ROB_entry(reorder_buffer, ld_sd_mem_obj.dest_tag)
+                    reorder_buffer[index].mem.extend([cycle, cycle + time_ld_sd_mem - 1])
+                    # for Sd, write commit cycle
+                    if ld_sd_mem_obj.op == 'Sd':
+                        reorder_buffer[index].commit.append(cycle)
 
-            # cycle ++
-            ld_sd_mem.cycle += 1
-            # get the data for Ld or reach the memory for Sd
-            if ld_sd_mem.cycle == time_ld_sd_mem:
-                ld_sd_mem.busy = 0
-                if ld_sd_mem.op == 'Ld':
-                    # put Ld data into results_buffer
-                    address = ld_sd_mem.address
-                    data = memory[address]
-                    results_buffer.append(fu_result())
-                    results_buffer[-1].value = data
-                    results_buffer[-1].dest_tag = ld_sd_mem.dest_tag
-                # put data into memory for Sd
-                else:
-                    memory[ld_sd_mem.address] = ld_sd_mem.data
+                # cycle ++
+                ld_sd_mem_obj.cycle += 1
+                # get the data for Ld or reach the memory for Sd
+                if ld_sd_mem_obj.cycle == time_ld_sd_mem:
+                    ld_sd_mem.busy = 0
+                    if ld_sd_mem_obj.op == 'Ld':
+                        # put Ld data into results_buffer
+                        address = ld_sd_mem_obj.address
+                        data = memory[address]
+                        results_buffer.append(fu_result())
+                        results_buffer[-1].value = data
+                        results_buffer[-1].dest_tag = ld_sd_mem_obj.dest_tag
+                    # put data into memory for Sd
+                    else:
+                        memory[ld_sd_mem_obj.address] = ld_sd_mem_obj.data
