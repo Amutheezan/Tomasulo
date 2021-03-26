@@ -40,17 +40,11 @@ def check_valid_ins_in_rs(rs, ROB, cycle):
                     if selected_rob.op == "Addi":
                         dependent = False
                     else:
-                        if rob_x.issue[0] < selected_rob.issue[0] and \
-                                len(rob_x.cdb) == 0:
-                            if selected_rob.tag_1st == rob_x.dest_tag \
-                                    or selected_rob.tag_2nd == rob_x.dest_tag:
+                        if rob_x.PC < selected_rob.PC and \
+                                (selected_rob.tag_1st == rob_x.dest_tag or selected_rob.tag_2nd == rob_x.dest_tag):
+                            if len(rob_x.cdb) == 0 or (len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle):
                                 dependent = True
-                        if rob_x.issue[0] <= selected_rob.issue[0] and \
-                                len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle\
-                                and rob_x.PC < selected_rob.PC:
-                            if selected_rob.tag_1st == rob_x.dest_tag \
-                                    or selected_rob.tag_2nd == rob_x.dest_tag:
-                                dependent = True
+                                break
                 if not dependent:
                     index = possible_indices[min_index]
                     break
@@ -71,11 +65,10 @@ def check_valid_ins_in_ldsd(ldsd, ROB, cycle):
                 index_p = find_ROB_entry(ROB, ldsd[i].dest_tag)
                 selected_rob = ROB[index_p]
                 for x, rob_x in enumerate(ROB):
-                    if rob_x.issue[0] <= selected_rob.issue[0] \
-                            and len(rob_x.cdb) == 1 and \
-                            rob_x.cdb[0] == cycle:
-                        if selected_rob.reg_tag == rob_x.dest_tag:
-                            dependent = True
+                    if rob_x.PC < selected_rob.PC and len(rob_x.cdb) == 1 and \
+                            rob_x.cdb[0] == cycle and selected_rob.reg_tag == rob_x.dest_tag:
+                        dependent = True
+                        break
                 if not dependent:
                     index = i
                     break

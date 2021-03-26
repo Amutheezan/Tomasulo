@@ -2,7 +2,7 @@
 Integer adder   4               1                               1
 FP adder        3               3                               2
 FP multiplier   2               15                              2
-Load/store unit 4               1               5               1
+Load/store unit 4               1               5               2
 
 ROB entries = 128
 R1=12, R2=32, F20=3.0

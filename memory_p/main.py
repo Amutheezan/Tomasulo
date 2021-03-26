@@ -9,6 +9,8 @@ from mem import mem
 from util import read_config
 from wb import wb
 
+import sys
+
 '''initialize'''
 # read instructions into a list 
 instructions = read_instruction('code.in')
@@ -81,7 +83,16 @@ item += 'WB'.ljust(10)
 item += 'COMMIT'.ljust(10)
 print(item)
 
-issue_width = 4
+# obtaining the issue_width
+# by default, providing the issue-width as 1
+if len(sys.argv) == 1:
+    issue_width = 1
+else:
+    # obtain the custom issue-width
+    issue_width = int(sys.argv[1])
+    # reset to default, if the issue width is not in limit
+    if not(1 <= issue_width <= 4):
+        issue_width = 1
 
 # main
 while (len(reorder_buffer) > 0) | (cycle == 1):

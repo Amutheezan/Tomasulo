@@ -1,6 +1,6 @@
 # Qing
 # 21st May 2017
-
+import sys
 from collections import deque
 from copy import deepcopy
 
@@ -90,7 +90,16 @@ item += 'WB'.ljust(10)
 item += 'COMMIT'.ljust(10)
 print(item)
 
-issue_width = 4
+# obtaining the issue_width
+# by default, providing the issue-width as 1
+if len(sys.argv) == 1:
+    issue_width = 1
+else:
+    # obtain the custom issue-width
+    issue_width = int(sys.argv[1])
+    # reset to default, if the issue width is not in limit
+    if not(1 <= issue_width <= 4):
+        issue_width = 1
 
 # main
 while (len(ROB) > 0) | (cycle == 1):
