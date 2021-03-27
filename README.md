@@ -37,6 +37,6 @@ Structure of each test_case folder (i.e. ```test_case_0x```, ```x = 1, 2```)
 I have implemented the reading ```configuration.txt``` file using ```read_config``` in ```util.py```.
 So, we can simply change  ```configuration.txt``` and run the program, without altering any python files.
 
-# LIMITATION 🔼
+## LIMITATION 🔼
 
 Doesn't support Branch Prediction.
