@@ -37,14 +37,11 @@ def check_valid_ins_in_rs(rs, ROB, cycle):
                 index_p = find_ROB_entry(ROB, rs[index_t].dest_tag)
                 selected_rob = ROB[index_p]
                 for i, rob_x in enumerate(ROB):
-                    if selected_rob.op == "Addi":
-                        dependent = False
-                    else:
-                        if rob_x.PC < selected_rob.PC and \
-                                (selected_rob.tag_1st == rob_x.dest_tag or selected_rob.tag_2nd == rob_x.dest_tag):
-                            if len(rob_x.cdb) == 0 or (len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle):
-                                dependent = True
-                                break
+                    if rob_x.PC < selected_rob.PC and \
+                            (selected_rob.tag_1st == rob_x.dest_tag or selected_rob.tag_2nd == rob_x.dest_tag):
+                        if len(rob_x.cdb) == 0 or (len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle):
+                            dependent = True
+                            break
                 if not dependent:
                     index = possible_indices[min_index]
                     break

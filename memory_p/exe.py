@@ -34,15 +34,11 @@ def check_valid_ins_in_rs(rs, reorder_buffer, cycle):
                 index_p = find_reorder_buffer_entry(reorder_buffer, rs[index_t].dest_tag)
                 selected_rob = reorder_buffer[index_p]
                 for i, rob_x in enumerate(reorder_buffer):
-                    if selected_rob.op == "Addi":
-                        dependent = False
-                        break
-                    else:
-                        if rob_x.counter < selected_rob.counter and \
-                                (selected_rob.tag_1st == rob_x.dest_tag or selected_rob.tag_2nd == rob_x.dest_tag):
-                            if len(rob_x.cdb) == 0 or (len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle):
-                                dependent = True
-                                break
+                    if rob_x.counter < selected_rob.counter and \
+                            (selected_rob.tag_1st == rob_x.dest_tag or selected_rob.tag_2nd == rob_x.dest_tag):
+                        if len(rob_x.cdb) == 0 or (len(rob_x.cdb) == 1 and rob_x.cdb[0] == cycle):
+                            dependent = True
+                            break
                 if not dependent:
                     index = possible_indices[min_index]
                     break
